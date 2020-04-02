@@ -44,6 +44,10 @@ std_msgs::Int16 int_msg;
 std_msgs::String str_msg;
 
 
+                                                                            //ROS PUBLISHER
+
+ros::Publisher chatter("chatter", &str_msg);
+char hello[13] = "hello world!";
 
 
 
@@ -219,10 +223,6 @@ ros::Subscriber<std_msgs::Int16> sub_s("/car/stop", &stopCallback);
 
 
 
-                                                                                    //ROS PUBLISHER
-
-ros::Publisher chatter("chatter", &str_msg);
-char hello[13] = "hello world!";
 
 
                                                                                    //SETUP
