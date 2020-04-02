@@ -86,7 +86,7 @@ void stop(){
   digitalWrite(motor2Pin4, LOW);
   }
 
-void moveFwd(len){
+void moveFwd(int len){
   // Move the DC motor forward at maximum speed
   Serial.println("Moving Forward");
   digitalWrite(motor1Pin1, LOW);
@@ -97,7 +97,7 @@ void moveFwd(len){
   delay(len);
   }
 
-void moveBwd(){
+void moveBwd(int len){
   // Move DC motor backwards at maximum speed
   Serial.println("Moving Backwards");
   digitalWrite(motor1Pin1, HIGH);
@@ -108,7 +108,7 @@ void moveBwd(){
   delay(len);
 }
 
-void turnRight(){
+void turnRight(int len){
   // Turn the DC motor right at maximum speed
   Serial.println("Turn Right");
   digitalWrite(motor1Pin1, LOW);
@@ -119,7 +119,7 @@ void turnRight(){
   delay(len);
   }
 
-void turnLeft(){
+void turnLeft(int len){
   // Turn the DC motor left at maximum speed
   Serial.println("Turn Left");
   digitalWrite(motor1Pin1, LOW);
@@ -130,7 +130,7 @@ void turnLeft(){
   delay(len);
   }
 
-void moveFwdInc(){
+void moveFwdInc(int len){
   // Move DC motor forward with increasing speed
   digitalWrite(motor1Pin1, HIGH);
   digitalWrite(motor1Pin2, LOW);
@@ -160,17 +160,17 @@ void leftCallback(const std_msgs::Int16& msg) { //  All subscriber messages call
 
 void rightCallback(const std_msgs::Int16& msg) {
     len = abs(msg.data);
-	turnRight();
+	turnRight(len);
 }
 
 void forwardCallback(const std_msgs::Int16& msg) {
     len = abs(msg.data);	
-	moveFwd();
+	moveFwd(len);
 }
 
 void backwardCallback(const std_msgs::Int16& msg) {
     len = abs(msg.data);
-    moveBwd();
+    moveBwd(len);
 }
 
 void stopCallback(const std_msgs::Int16& msg) {
