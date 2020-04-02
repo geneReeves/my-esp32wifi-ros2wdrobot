@@ -35,6 +35,37 @@ class WiFiHardware {
   }
 };
 
+                                                                            // ROS VAR DECLARATION
+
+// Ros Objects
+ros::NodeHandle_<WiFiHardware> nh;
+
+std_msgs::Int16 int_msg;
+std_msgs::String str_msg;
+
+
+
+
+
+
+                                                                            // MOTOR CONFIGURATION
+// Motor A
+int motor1Pin1 = 27;
+int motor1Pin2 = 26;
+int enable1Pin = 14;
+
+// Motor B
+int motor2Pin3 = 33;
+int motor2Pin4 = 32;
+int enable2Pin = 12;
+
+// Setting PWM properties
+const int freq = 30000;
+const int pwmChannel = 0;
+const int resolution = 8;
+int dutyCycle = 200;
+                                                                            
+
 
                                                                             //FUNCTION DEFINITION
                                                                             
@@ -149,27 +180,27 @@ void moveFwdInc(int len){
   }
 
 
-                                                                            // ROS CONFIGURATION
                                                                             
                                                                             
-// Ros CallBack Functions
+                                                                            // ROS CALLBACK FUNCTIONS
+
 void leftCallback(const std_msgs::Int16& msg) { //  All subscriber messages callbacks here
-    len = abs(msg.data);	
+    int len = abs(msg.data);	
 	turnLeft(len);
 }
 
 void rightCallback(const std_msgs::Int16& msg) {
-    len = abs(msg.data);
+    int len = abs(msg.data);
 	turnRight(len);
 }
 
 void forwardCallback(const std_msgs::Int16& msg) {
-    len = abs(msg.data);	
+    int len = abs(msg.data);	
 	moveFwd(len);
 }
 
 void backwardCallback(const std_msgs::Int16& msg) {
-    len = abs(msg.data);
+    int len = abs(msg.data);
     moveBwd(len);
 }
 
@@ -178,14 +209,7 @@ void stopCallback(const std_msgs::Int16& msg) {
 }
 
 
-// Ros Objects
-ros::NodeHandle_<WiFiHardware> nh;
-
-std_msgs::Int16 int_msg;
-std_msgs::String str_msg;
-
-ros::Publisher chatter("chatter", &str_msg);
-char hello[13] = "hello world!";
+                                                                                    //ROS SUBSCRIBER
 
 ros::Subscriber<std_msgs::Int16> sub_f("/car/forward", &forwardCallback);
 ros::Subscriber<std_msgs::Int16> sub_b("/car/backward", &backwardCallback);
@@ -195,24 +219,10 @@ ros::Subscriber<std_msgs::Int16> sub_s("/car/stop", &stopCallback);
 
 
 
+                                                                                    //ROS PUBLISHER
 
-                                                                            // MOTOR CONFIGURATION
-// Motor A
-int motor1Pin1 = 27;
-int motor1Pin2 = 26;
-int enable1Pin = 14;
-
-// Motor B
-int motor2Pin3 = 33;
-int motor2Pin4 = 32;
-int enable2Pin = 12;
-
-// Setting PWM properties
-const int freq = 30000;
-const int pwmChannel = 0;
-const int resolution = 8;
-int dutyCycle = 200;
-
+ros::Publisher chatter("chatter", &str_msg);
+char hello[13] = "hello world!";
 
 
                                                                                    //SETUP
