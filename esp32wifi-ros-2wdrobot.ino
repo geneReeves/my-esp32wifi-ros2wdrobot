@@ -1,11 +1,9 @@
 #include <ros.h>
 #include <std_msgs/String.h>
-#include <std_msgs/Int16.h>
 #include <WiFi.h>
+#include <std_msgs/Int16.h>
 
                                                                             // WIFI CONFIGURATION
-                                                                            
-                                                                            
 const char SSID[] = "ros-master-pi4D1C";
 const char PASSWORD[] = "robotseverywhere";
 IPAddress server(10,42,0,1); // e.g.: IPAddress server(192, 168, 1, 3);
@@ -35,22 +33,17 @@ class WiFiHardware {
   }
 };
 
-                                                                            // ROS VAR DECLARATION
-
-// Ros Objects
+                                                                            // ROS DECLARATION
 ros::NodeHandle_<WiFiHardware> nh;
 
-std_msgs::Int16 int_msg;
 std_msgs::String str_msg;
+std_msgs::Int16 int_msg;
 
 
                                                                             //ROS PUBLISHER
-
 ros::Publisher chatter("chatter", &str_msg);
+
 char hello[13] = "hello world!";
-
-
-
 
                                                                             // MOTOR CONFIGURATION
 // Motor A
@@ -68,12 +61,9 @@ const int freq = 30000;
 const int pwmChannel = 0;
 const int resolution = 8;
 int dutyCycle = 200;
-                                                                            
 
 
                                                                             //FUNCTION DEFINITION
-                                                                            
-                                                                            
 void connectWiFi(){
   Serial.begin(115200);
   WiFi.begin(SSID,PASSWORD);
@@ -88,7 +78,7 @@ void connectWiFi(){
   nh.initNode();
   nh.advertise(chatter);
   delay(10);  
-  }
+}
 
 void setupMotor(){
   // sets the pins as outputs:
@@ -110,7 +100,7 @@ void setupMotor(){
 
   // testing
   Serial.print("Testing DC Motor...");
-  }
+}
 
 void stop(){
   // Stop the DC motor
@@ -121,51 +111,43 @@ void stop(){
   digitalWrite(motor2Pin4, LOW);
   }
 
-void moveFwd(int len){
+void moveFwd(){
   // Move the DC motor forward at maximum speed
   Serial.println("Moving Forward");
   digitalWrite(motor1Pin1, LOW);
   digitalWrite(motor1Pin2, HIGH);
   digitalWrite(motor2Pin3, LOW);
   digitalWrite(motor2Pin4, HIGH);
-  
-  delay(len);
   }
 
-void moveBwd(int len){
+void moveBwd(){
   // Move DC motor backwards at maximum speed
   Serial.println("Moving Backwards");
   digitalWrite(motor1Pin1, HIGH);
   digitalWrite(motor1Pin2, LOW);
   digitalWrite(motor2Pin3, HIGH);
   digitalWrite(motor2Pin4, LOW);
-  
-  delay(len);
 }
 
-void turnRight(int len){
+void turnRight(){
   // Turn the DC motor right at maximum speed
   Serial.println("Turn Right");
   digitalWrite(motor1Pin1, LOW);
   digitalWrite(motor1Pin2, HIGH);
   digitalWrite(motor2Pin3, LOW);
   digitalWrite(motor2Pin4, LOW);
-  
-  delay(len);
   }
 
-void turnLeft(int len){
+void turnLeft(){
   // Turn the DC motor left at maximum speed
   Serial.println("Turn Left");
   digitalWrite(motor1Pin1, LOW);
   digitalWrite(motor1Pin2, LOW);
   digitalWrite(motor2Pin3, LOW);
   digitalWrite(motor2Pin4, HIGH);
-  
-  delay(len);
   }
 
-void moveFwdInc(int len){
+void moveFwdInc(){
   // Move DC motor forward with increasing speed
   digitalWrite(motor1Pin1, HIGH);
   digitalWrite(motor1Pin2, LOW);
@@ -177,39 +159,37 @@ void moveFwdInc(int len){
     Serial.print("Forward with duty cycle: ");
     Serial.println(dutyCycle);
     dutyCycle = dutyCycle + 5;
-    delay(len);
+    delay(500);
     }
   dutyCycle = 200;
 
   }
-
-
-                                                                            
+                                                                           
                                                                             
                                                                             // ROS CALLBACK FUNCTIONS
 
 void leftCallback(const std_msgs::Int16& msg) { //  All subscriber messages callbacks here
-    int len = abs(msg.data);	
-	turnLeft(len);
+    int len = abs(msg.data);  
+    turnLeft();
 }
 
 void rightCallback(const std_msgs::Int16& msg) {
     int len = abs(msg.data);
-	turnRight(len);
+    turnRight();
 }
 
 void forwardCallback(const std_msgs::Int16& msg) {
-    int len = abs(msg.data);	
-	moveFwd(len);
+    int len = abs(msg.data);  
+    moveFwd();
 }
 
 void backwardCallback(const std_msgs::Int16& msg) {
     int len = abs(msg.data);
-    moveBwd(len);
+    moveBwd();
 }
 
 void stopCallback(const std_msgs::Int16& msg) {
-	stop();
+   //stop();
 }
 
 
@@ -222,8 +202,20 @@ ros::Subscriber<std_msgs::Int16> sub_r("/car/right", &rightCallback);
 ros::Subscriber<std_msgs::Int16> sub_s("/car/stop", &stopCallback);
 
 
+                                                                                   // NODE HANDLER SETUP
 
+void initNodeHandler(){
 
+  //nh.initNode();
+  //nh.getHardware()->setConnection(server,serverPort);
+  nh.subscribe(sub_f);
+  nh.subscribe(sub_b);
+  nh.subscribe(sub_l);
+  nh.subscribe(sub_r);
+  nh.subscribe(sub_s);  
+}
+
+                      
 
                                                                                    //SETUP
 
@@ -231,12 +223,21 @@ void setup() {
 
   setupMotor();
   connectWiFi();
+  initNodeHandler();
 
 }
                                                                                    //LOOP
 void loop() {
 
-nh.spinOnce();
-delay(500);
+moveFwd();
+delay(1000);
+moveBwd();
+delay(1000);
+turnRight();
+delay(1000);
+turnLeft();
+delay(1000);
+moveFwdInc();
+delay(1000);
 
 }
