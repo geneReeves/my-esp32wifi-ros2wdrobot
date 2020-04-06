@@ -49,7 +49,7 @@ char hello[13] = "hello world!";
 // Motor A
 int motor1Pin1 = 27;
 int motor1Pin2 = 26;
-int enable1Pin = 14;
+int enable1Pin = 13;
 
 // Motor B
 int motor2Pin3 = 33;
@@ -62,6 +62,11 @@ const int pwmChannel = 0;
 const int resolution = 8;
 int dutyCycle = 200;
 
+bool mfwd; // flag to move fwd
+bool mbwd;  // flag to move bwd 
+bool tleft;  // flag to turn left
+bool tright; // flag to turn right
+int len=0; //length of motor running
 
                                                                             //FUNCTION DEFINITION
 void connectWiFi(){
@@ -75,8 +80,8 @@ void connectWiFi(){
   }
 
   Serial.println(" connected");
-  nh.initNode();
-  nh.advertise(chatter);
+  //nh.initNode();
+  //nh.advertise(chatter);
   delay(10);  
 }
 
@@ -102,49 +107,93 @@ void setupMotor(){
   Serial.print("Testing DC Motor...");
 }
 
-void stop(){
+void stopMove(){
   // Stop the DC motor
   Serial.println("Motor stopped");
   digitalWrite(motor1Pin1, LOW);
   digitalWrite(motor1Pin2, LOW);
   digitalWrite(motor2Pin3, LOW);
   digitalWrite(motor2Pin4, LOW);
+  
   }
 
-void moveFwd(){
+void moveFwd(int ln){
   // Move the DC motor forward at maximum speed
   Serial.println("Moving Forward");
   digitalWrite(motor1Pin1, LOW);
   digitalWrite(motor1Pin2, HIGH);
   digitalWrite(motor2Pin3, LOW);
   digitalWrite(motor2Pin4, HIGH);
+
+  //Serial.print(len);
+  //Serial.print(mfwd);  
+
+  len=ln-1; // use local variable to decrement global var value
+  
+    if (len<=1)
+    {
+      mfwd=false;
+      //stop();
+    }
+    else
+      mfwd=true;
   }
 
-void moveBwd(){
+void moveBwd(int ln){
   // Move DC motor backwards at maximum speed
   Serial.println("Moving Backwards");
   digitalWrite(motor1Pin1, HIGH);
   digitalWrite(motor1Pin2, LOW);
   digitalWrite(motor2Pin3, HIGH);
   digitalWrite(motor2Pin4, LOW);
+
+  len=ln-1; // use local variable to decrement global var value
+  
+    if (len<=1)
+    {
+      mbwd=false;
+      //stop();
+    }
+    else
+      mbwd=true;
 }
 
-void turnRight(){
+void turnRight(int ln){
   // Turn the DC motor right at maximum speed
   Serial.println("Turn Right");
   digitalWrite(motor1Pin1, LOW);
   digitalWrite(motor1Pin2, HIGH);
   digitalWrite(motor2Pin3, LOW);
   digitalWrite(motor2Pin4, LOW);
+
+  len=ln-1; // use local variable to decrement global var value
+  
+    if (len<=1)
+    {
+      tright=false;
+      //stop();
+    }
+    else
+      tright=true;
   }
 
-void turnLeft(){
+void turnLeft(int ln){
   // Turn the DC motor left at maximum speed
   Serial.println("Turn Left");
   digitalWrite(motor1Pin1, LOW);
   digitalWrite(motor1Pin2, LOW);
   digitalWrite(motor2Pin3, LOW);
   digitalWrite(motor2Pin4, HIGH);
+
+  len=ln-1; // use local variable to decrement global var value
+  
+    if (len<=1)
+    {
+      tleft=false;
+      //stop();
+    }
+    else
+      tleft=true;  
   }
 
 void moveFwdInc(){
@@ -169,27 +218,27 @@ void moveFwdInc(){
                                                                             // ROS CALLBACK FUNCTIONS
 
 void leftCallback(const std_msgs::Int16& msg) { //  All subscriber messages callbacks here
-    int len = abs(msg.data);  
-    turnLeft();
+    len = abs(msg.data);  
+    turnLeft(len);
 }
 
 void rightCallback(const std_msgs::Int16& msg) {
-    int len = abs(msg.data);
-    turnRight();
+    len = abs(msg.data);
+    turnRight(len);
 }
 
 void forwardCallback(const std_msgs::Int16& msg) {
-    int len = abs(msg.data);  
-    moveFwd();
+    len = abs(msg.data);  
+    moveFwd(len);        //set length off motor running from data in /car/forward
 }
 
 void backwardCallback(const std_msgs::Int16& msg) {
-    int len = abs(msg.data);
-    moveBwd();
+    len = abs(msg.data);
+    moveBwd(len);
 }
 
 void stopCallback(const std_msgs::Int16& msg) {
-   //stop();
+   stopMove();
 }
 
 
@@ -206,38 +255,51 @@ ros::Subscriber<std_msgs::Int16> sub_s("/car/stop", &stopCallback);
 
 void initNodeHandler(){
 
-  //nh.initNode();
+  nh.initNode();
+  nh.advertise(chatter);
   //nh.getHardware()->setConnection(server,serverPort);
   nh.subscribe(sub_f);
   nh.subscribe(sub_b);
   nh.subscribe(sub_l);
   nh.subscribe(sub_r);
   nh.subscribe(sub_s);  
-}
-
-                      
+}                      
 
                                                                                    //SETUP
 
 void setup() {
 
-  setupMotor();
   connectWiFi();
   initNodeHandler();
+  setupMotor();
 
 }
                                                                                    //LOOP
 void loop() {
+ 
+  nh.spinOnce();
 
-moveFwd();
-delay(1000);
-moveBwd();
-delay(1000);
-turnRight();
-delay(1000);
-turnLeft();
-delay(1000);
-moveFwdInc();
-delay(1000);
+  if (mfwd==true) {
+    ledcWrite(pwmChannel, dutyCycle); // without this in loop the motor wont move
+    moveFwd(len); // give decremented global var value into local var argument
+  }
 
+  else if (mbwd==true) {
+    ledcWrite(pwmChannel, dutyCycle); // without this in loop the motor wont move
+    moveBwd(len); // give decremented global var value into local var argument
+  }
+
+  else if (tleft==true) {
+    ledcWrite(pwmChannel, dutyCycle); // without this in loop the motor wont move
+    turnLeft(len); // give decremented global var value into local var argument
+  } 
+
+  
+  else if (tright==true) {
+    ledcWrite(pwmChannel, dutyCycle); // without this in loop the motor wont move
+    turnRight(len); // give decremented global var value into local var argument
+  } 
+
+ else
+  stopMove();
 }
