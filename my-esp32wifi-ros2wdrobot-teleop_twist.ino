@@ -99,17 +99,30 @@ ros::Publisher speed_pub("speed", &speed_msg);
 
 //pin definition
 // Motor A - left look from back
+#define CHA 0
 #define enable1Pin 13
 #define motor1Pin1 27
 #define motor1Pin2 26
 
 // Motor B - right look from back
+#define CHB 1
 #define motor2Pin3 33
 #define motor2Pin4 32
 #define enable2Pin 12
 
-L298N leftMotor(enable1Pin,motor1Pin1,motor1Pin2);
-L298N rightMotor(enable2Pin,motor2Pin3,motor2Pin4);
+
+const int CCW = 2; // do not change
+const int CW  = 1; // do not change
+
+#define leftMotor 1 // do not change
+#define rightMotor 2 // do not change
+
+bool leftMotorCW; // flags motor rotation for encoder
+bool leftMotorCCW;
+bool rightMotorCW;
+bool rightMotorCCW;
+
+Robojax_L298N_DC_motor robotMotors(motor1Pin1, motor1Pin2, enable1Pin, CHA,  motor2Pin3, motor2Pin4, enable2Pin, CHB);
 
 
 
@@ -151,19 +164,12 @@ void connectWiFi(){
 
 void setupMotor(){
 
-  //L298N leftMotor(enable1Pin,motor1Pin1,motor1Pin2);
-  //L298N rightMotor(enable2Pin,motor2Pin3,motor2Pin4);
-
-    //setting motor speeds to zero
-  leftMotor.setSpeed(0);
-  leftMotor.stop();
-  rightMotor.setSpeed(0);
-  rightMotor.stop();
+  robotMotors.begin();
   
   Serial.begin(115200);
 
   // testing
-  Serial.print("Testing DC Motor...");
+  Serial.print("DC Motor Ready...");
 }
 
 void setupPID(){
@@ -247,8 +253,7 @@ void loop() {
   if((millis()-lastMilli) >= LOOPTIME)   
   {                                                                           // enter timed loop
     lastMilli = millis();
-  
-    
+   
     
     if (abs(pos_left) < 5){                                                   //Avoid taking in account small disturbances
       speed_act_left = 0;
@@ -273,20 +278,25 @@ void loop() {
     PWM_leftMotor = constrain(((speed_req_left+sgn(speed_req_left)*min_speed_cmd)/speed_to_pwm_ratio) + (speed_cmd_left/speed_to_pwm_ratio), -255, 255); //
     
     if (noCommLoops >= noCommLoopMax) {                   //Stopping if too much time without command
-      leftMotor.setSpeed(0);
-      leftMotor.stop();
+      robotMotors.brake(leftMotor);
+      leftMotorCW=false;
+      leftMotorCCW=false;      
     }
     else if (speed_req_left == 0){                        //Stopping
-      leftMotor.setSpeed(0);
-      leftMotor.stop();
+      robotMotors.brake(leftMotor);
+      leftMotorCW=false;
+      leftMotorCCW=false;
     }
     else if (PWM_leftMotor > 0){                          //Going forward
-      leftMotor.setSpeed(abs(PWM_leftMotor));
-      leftMotor.forward();
+      robotMotors.rotate(leftMotor, abs(PWM_leftMotor), CW);
+      leftMotorCW=true;
+      leftMotorCCW=false;  
+      
     }
     else {                                               //Going backward
-      leftMotor.setSpeed(abs(PWM_leftMotor));
-      leftMotor.backward();
+      robotMotors.rotate(leftMotor, abs(PWM_leftMotor), CCW);
+      leftMotorCW=false;
+      leftMotorCCW=true; 
     }
     
     speed_cmd_right = constrain(speed_cmd_right, -max_speed, max_speed);    
@@ -295,20 +305,25 @@ void loop() {
     PWM_rightMotor = constrain(((speed_req_right+sgn(speed_req_right)*min_speed_cmd)/speed_to_pwm_ratio) + (speed_cmd_right/speed_to_pwm_ratio), -255, 255); // 
 
     if (noCommLoops >= noCommLoopMax) {                   //Stopping if too much time without command
-      rightMotor.setSpeed(0);
-      rightMotor.stop();
+      robotMotors.brake(rightMotor);
+      rightMotorCW=false;
+      rightMotorCCW=false; 
+      
     }
     else if (speed_req_right == 0){                       //Stopping
-      rightMotor.setSpeed(0);
-      rightMotor.stop();
+      robotMotors.brake(rightMotor);
+      rightMotorCW=false;
+      rightMotorCCW=false;
     }
     else if (PWM_rightMotor > 0){                         //Going forward
-      rightMotor.setSpeed(abs(PWM_rightMotor));
-      rightMotor.forward();
+      robotMotors.rotate(rightMotor, abs(PWM_leftMotor), CW);
+      rightMotorCW=true;
+      rightMotorCCW=false;
     }
     else {                                                //Going backward
-      rightMotor.setSpeed(abs(PWM_rightMotor));
-      rightMotor.backward();
+      robotMotors.rotate(rightMotor, abs(PWM_leftMotor), CCW);
+      rightMotorCW=false;
+      rightMotorCCW=true;
     }
 
     if((millis()-lastMilli) >= LOOPTIME){         //write an error if execution time of the loop in longer than the specified looptime
@@ -341,12 +356,19 @@ void publishSpeed(double time) {
 void encoderLeftMotor() {
   //if (digitalRead(PIN_ENCOD_A_MOTOR_LEFT) == digitalRead(PIN_ENCOD_B_MOTOR_LEFT)) pos_left++;
   //else pos_left--;
+    if (digitalRead(PIN_ENCOD_A_MOTOR_LEFT) && leftMotorCW)  pos_left++;
+      
+    else if (digitalRead(PIN_ENCOD_A_MOTOR_LEFT) && leftMotorCCW) pos_left--;
+  
 }
 
 //Right motor encoder counter
 void encoderRightMotor() {
   //if (digitalRead(PIN_ENCOD_A_MOTOR_RIGHT) == digitalRead(PIN_ENCOD_B_MOTOR_RIGHT)) pos_right--;
   //else pos_right++;
+    if (digitalRead(PIN_ENCOD_A_MOTOR_RIGHT) && rightMotorCW)  pos_right++;
+      
+    else if (digitalRead(PIN_ENCOD_A_MOTOR_RIGHT) && rightMotorCCW) pos_right--;
 }
 
 template <typename T> int sgn(T val) {
