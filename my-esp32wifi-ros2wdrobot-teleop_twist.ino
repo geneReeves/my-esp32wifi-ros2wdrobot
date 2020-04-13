@@ -92,31 +92,20 @@ ros::Publisher speed_pub("speed", &speed_msg);
 
 
 
-                                                                            // MOTOR PARAMETERS
-// Motor A
-int motor1Pin1 = 27;
-int motor1Pin2 = 26;
-int enable1Pin = 13;
+                                                                           // MOTOR PARAMETERS
 
-// Motor B
-int motor2Pin3 = 33;
-int motor2Pin4 = 32;
-int enable2Pin = 12;
 
-// Setting PWM properties
-const int freq = 30000;
-const int pwmChannel = 0;
-const int resolution = 8;
-int dutyCycle = 200;
+//pin definition
+// Motor A - left look from back
+#define enable1Pin 13
+#define motor1Pin1 27
+#define motor1Pin2 26
 
-bool mfwd; // flag to move fwd
-bool mbwd;  // flag to move bwd 
-bool tleft;  // flag to turn left
-bool tright; // flag to turn right
-int len=0; //length of motor running
+// Motor B - right look from back
+#define motor2Pin3 33;
+#define motor2Pin4 32;
+#define enable2Pin 12;
 
-L298N leftMotor();
-L298N rightMotor();
 
 
                                                                             // PID CONTROLLER PARAMETERS 
@@ -133,8 +122,8 @@ PID PID_leftMotor(&speed_act_left, &speed_cmd_left, &speed_req_left, PID_left_pa
 PID PID_rightMotor(&speed_act_right, &speed_cmd_right, &speed_req_right, PID_right_param[0], PID_right_param[1], PID_right_param[2], DIRECT);   //Setting up the PID for right motor
 
 
-int encoderLeftPin = 34;  //Left motor encoder pin 34
-int encoderRightPin = 35; //Right motor encoder pin 35
+int PIN_ENCOD_A_MOTOR_LEFT = 34;  //Left motor encoder pin 34
+int PIN_ENCOD_A_MOTOR_RIGHT = 35; //Right motor encoder pin 35
 
 
 
@@ -156,21 +145,16 @@ void connectWiFi(){
 }
 
 void setupMotor(){
-  // sets the pins as outputs:
-  pinMode(motor1Pin1, OUTPUT);
-  pinMode(motor1Pin2, OUTPUT);
-  pinMode(enable1Pin, OUTPUT);
-  pinMode(motor2Pin3, OUTPUT);
-  pinMode(motor2Pin4, OUTPUT);
-  pinMode(enable2Pin, OUTPUT);
 
-  // configure LED PWM functionalities
-  ledcSetup(pwmChannel, freq, resolution);
+  L298N leftMotor(enable1Pin,motor1Pin1,motor1Pin2);
+  L298N rightMotor(enable2Pin,motor2Pin3,motor2Pin4);
 
-  // attach the channel to the GPIO to be controlled
-  ledcAttachPin(enable1Pin, pwmChannel);
-  ledcAttachPin(enable2Pin, pwmChannel);
-
+    //setting motor speeds to zero
+  leftMotor.setSpeed(0);
+  leftMotor.stop();
+  rightMotor.setSpeed(0);
+  rightMotor.stop();
+  
   Serial.begin(115200);
 
   // testing
@@ -207,140 +191,6 @@ void setEncoder(){
   
 }
 
-void stopMove(){
-  // Stop the DC motor
-  Serial.println("Motor stopped");
-  digitalWrite(motor1Pin1, LOW);
-  digitalWrite(motor1Pin2, LOW);
-  digitalWrite(motor2Pin3, LOW);
-  digitalWrite(motor2Pin4, LOW);
-  
-}
-
-void moveFwd(int ln){
-  // Move the DC motor forward at maximum speed
-  Serial.println("Moving Forward");
-  digitalWrite(motor1Pin1, LOW);
-  digitalWrite(motor1Pin2, HIGH);
-  digitalWrite(motor2Pin3, LOW);
-  digitalWrite(motor2Pin4, HIGH);
-
-  //Serial.print(len);
-  //Serial.print(mfwd);  
-
-  len=ln-1; // use local variable to decrement global var value
-  
-    if (len<=1)
-    {
-      mfwd=false;
-      //stop();
-    }
-    else
-      mfwd=true;
-}
-
-void moveBwd(int ln){
-  // Move DC motor backwards at maximum speed
-  Serial.println("Moving Backwards");
-  digitalWrite(motor1Pin1, HIGH);
-  digitalWrite(motor1Pin2, LOW);
-  digitalWrite(motor2Pin3, HIGH);
-  digitalWrite(motor2Pin4, LOW);
-
-  len=ln-1; // use local variable to decrement global var value
-  
-    if (len<=1)
-    {
-      mbwd=false;
-      //stop();
-    }
-    else
-      mbwd=true;
-}
-
-void turnRight(int ln){
-  // Turn the DC motor right at maximum speed
-  Serial.println("Turn Right");
-  digitalWrite(motor1Pin1, LOW);
-  digitalWrite(motor1Pin2, HIGH);
-  digitalWrite(motor2Pin3, LOW);
-  digitalWrite(motor2Pin4, LOW);
-
-  len=ln-1; // use local variable to decrement global var value
-  
-    if (len<=1)
-    {
-      tright=false;
-      //stop();
-    }
-    else
-      tright=true;
- }
-
-void turnLeft(int ln){
-  // Turn the DC motor left at maximum speed
-  Serial.println("Turn Left");
-  digitalWrite(motor1Pin1, LOW);
-  digitalWrite(motor1Pin2, LOW);
-  digitalWrite(motor2Pin3, LOW);
-  digitalWrite(motor2Pin4, HIGH);
-
-  len=ln-1; // use local variable to decrement global var value
-  
-    if (len<=1)
-    {
-      tleft=false;
-      //stop();
-    }
-    else
-      tleft=true;  
- }
-
-void moveFwdInc(){
-  // Move DC motor forward with increasing speed
-  digitalWrite(motor1Pin1, HIGH);
-  digitalWrite(motor1Pin2, LOW);
-  digitalWrite(motor2Pin3, LOW);
-  digitalWrite(motor2Pin4, HIGH);
-
-  while (dutyCycle <= 255){
-    ledcWrite(pwmChannel, dutyCycle);
-    Serial.print("Forward with duty cycle: ");
-    Serial.println(dutyCycle);
-    dutyCycle = dutyCycle + 5;
-    delay(500);
-    }
-  dutyCycle = 200;
-
- }
-                                                                           
-                                                                            
-                                                                            // ROS CALLBACK FUNCTIONS
-
-void leftCallback(const std_msgs::Int16& msg) { //  All subscriber messages callbacks here
-    len = abs(msg.data);  
-    turnLeft(len);
-}
-
-void rightCallback(const std_msgs::Int16& msg) {
-    len = abs(msg.data);
-    turnRight(len);
-}
-
-void forwardCallback(const std_msgs::Int16& msg) {
-    len = abs(msg.data);  
-    moveFwd(len);        //set length off motor running from data in /car/forward
-}
-
-void backwardCallback(const std_msgs::Int16& msg) {
-    len = abs(msg.data);
-    moveBwd(len);
-}
-
-void stopCallback(const std_msgs::Int16& msg) {
-   stopMove();
-}
-
 //function that will be called when receiving command from host
 void handle_cmd (const geometry_msgs::Twist& cmd_vel) {
   noCommLoops = 0;                                                  //Reset the counter for number of main loops without communication
@@ -354,14 +204,7 @@ void handle_cmd (const geometry_msgs::Twist& cmd_vel) {
 }
 
 
-
                                                                                     // ROS SUBSCRIBER
-
-ros::Subscriber<std_msgs::Int16> sub_f("/car/forward", &forwardCallback);
-ros::Subscriber<std_msgs::Int16> sub_b("/car/backward", &backwardCallback);
-ros::Subscriber<std_msgs::Int16> sub_l("/car/left", &leftCallback);
-ros::Subscriber<std_msgs::Int16> sub_r("/car/right", &rightCallback);
-ros::Subscriber<std_msgs::Int16> sub_s("/car/stop", &stopCallback);
 
 ros::Subscriber<geometry_msgs::Twist> cmd_vel("cmd_vel", handle_cmd);   //create a subscriber to ROS topic for velocity commands (will execute "handle_cmd" function when receiving data)
 
@@ -373,14 +216,11 @@ void initNodeHandler(){
 
   nh.initNode();
   nh.advertise(chatter);
-  //nh.getHardware()->setConnection(server,serverPort);
-  nh.subscribe(sub_f);
-  nh.subscribe(sub_b);
-  nh.subscribe(sub_l);
-  nh.subscribe(sub_r);
-  nh.subscribe(sub_s);  
-}
 
+  nh.subscribe(cmd_vel);    //suscribe to ROS topic for velocity commands
+  nh.advertise(speed_pub);  //prepare to publish speed in ROS topic
+  
+}
                       
 
                                                                                    // SETUP ALL
@@ -391,52 +231,94 @@ void setup() {
   initNodeHandler();
   setupMotor();
 
-  //initialize the variables we're linked to
-  leftInput = analogRead(encoderLeftPin);
-  rightInput = analogRead(encoderRightPin);
-  Setpoint = 100;
-
-  //turn the PID on
-  leftPID.SetMode(AUTOMATIC);
-  rightPID.SetMode(AUTOMATIC);
-
+  setupPID();
+  setEncoder();
 }
                                                                                    //LOOP MAIN
 void loop() {
 
   nh.spinOnce();
 
-  if (mfwd==true) {
-    ledcWrite(pwmChannel, dutyCycle); // without this in loop the motor wont move
-    moveFwd(len); // give decremented global var value into local var argument
-  }
-  else if (mbwd==true) {
-    ledcWrite(pwmChannel, dutyCycle); // without this in loop the motor wont move
-    moveBwd(len); // give decremented global var value into local var argument
-  }
-  else if (tleft==true) {
-    ledcWrite(pwmChannel, dutyCycle); // without this in loop the motor wont move
-    turnLeft(len); // give decremented global var value into local var argument
-  } 
-  else if (tright==true) {
-    ledcWrite(pwmChannel, dutyCycle); // without this in loop the motor wont move
-    turnRight(len); // give decremented global var value into local var argument
-  } 
-  else
-    stopMove();
-
-
-/*
-  leftInput = analogRead(encoderLeftPin);
-  rightInput = analogRead(encoderRightPin);
-  leftPID.Compute();
-  rightPID.Compute();
+  if((millis()-lastMilli) >= LOOPTIME)   
+  {                                                                           // enter timed loop
+    lastMilli = millis();
   
-  //analogWrite(PIN_OUTPUT, Output);
-*/
- 
-}
+    
+    
+    if (abs(pos_left) < 5){                                                   //Avoid taking in account small disturbances
+      speed_act_left = 0;
+    }
+    else {
+      speed_act_left=((pos_left/encoder_cpr)*2*PI)*(1000/LOOPTIME)*radius;           // calculate speed of left wheel
+    }
+    
+    if (abs(pos_right) < 5){                                                  //Avoid taking in account small disturbances
+      speed_act_right = 0;
+    }
+    else {
+    speed_act_right=((pos_right/encoder_cpr)*2*PI)*(1000/LOOPTIME)*radius;          // calculate speed of right wheel
+    }
+    
+    pos_left = 0;
+    pos_right = 0;
 
+    speed_cmd_left = constrain(speed_cmd_left, -max_speed, max_speed);
+    PID_leftMotor.Compute();                                                 
+    // compute PWM value for left motor. Check constant definition comments for more information.
+    PWM_leftMotor = constrain(((speed_req_left+sgn(speed_req_left)*min_speed_cmd)/speed_to_pwm_ratio) + (speed_cmd_left/speed_to_pwm_ratio), -255, 255); //
+    
+    if (noCommLoops >= noCommLoopMax) {                   //Stopping if too much time without command
+      leftMotor.setSpeed(0);
+      leftMotor.stop();
+    }
+    else if (speed_req_left == 0){                        //Stopping
+      leftMotor.setSpeed(0);
+      leftMotor.stop();
+    }
+    else if (PWM_leftMotor > 0){                          //Going forward
+      leftMotor.setSpeed(abs(PWM_leftMotor));
+      leftMotor.backward();
+    }
+    else {                                               //Going backward
+      leftMotor.setSpeed(abs(PWM_leftMotor));
+      leftMotor.forward();
+    }
+    
+    speed_cmd_right = constrain(speed_cmd_right, -max_speed, max_speed);    
+    PID_rightMotor.Compute();                                                 
+    // compute PWM value for right motor. Check constant definition comments for more information.
+    PWM_rightMotor = constrain(((speed_req_right+sgn(speed_req_right)*min_speed_cmd)/speed_to_pwm_ratio) + (speed_cmd_right/speed_to_pwm_ratio), -255, 255); // 
+
+    if (noCommLoops >= noCommLoopMax) {                   //Stopping if too much time without command
+      rightMotor.setSpeed(0);
+      rightMotor.stop();
+    }
+    else if (speed_req_right == 0){                       //Stopping
+      rightMotor.setSpeed(0);
+      rightMotor.stop();
+    }
+    else if (PWM_rightMotor > 0){                         //Going forward
+      rightMotor.setSpeed(abs(PWM_rightMotor));
+      rightMotor.forward();
+    }
+    else {                                                //Going backward
+      rightMotor.setSpeed(abs(PWM_rightMotor));
+      rightMotor->backward();
+    }
+
+    if((millis()-lastMilli) >= LOOPTIME){         //write an error if execution time of the loop in longer than the specified looptime
+      Serial.println(" TOO LONG ");
+    }
+
+    noCommLoops++;
+    if (noCommLoops == 65535){
+      noCommLoops = noCommLoopMax;
+    }
+    
+    publishSpeed(LOOPTIME);   //Publish odometry on ROS topic
+  }
+ }
+ 
                                                                     // FUNCTIONS 
                                                 
 //Publish function for odometry, uses a vector type message to send the data (message type is not meant for that but that's easier than creating a specific message type)
@@ -464,4 +346,3 @@ void encoderRightMotor() {
 
 template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));
-}
