@@ -1,4 +1,4 @@
-
+#include <Robojax_L298N_DC_motor.h>
 #include <ros.h>
 #include <std_msgs/String.h>
 #include <WiFi.h>
@@ -7,7 +7,9 @@
 #include <geometry_msgs/Vector3Stamped.h>
 #include <geometry_msgs/Twist.h>
 #include <ros/time.h>
-#include <L298N.h>
+
+
+
 
                                                                             // WIFI CONFIGURATION
 const char SSID[] = "ros-master-pi4D1C";
@@ -45,9 +47,9 @@ class WiFiHardware {
 
 const double radius = 0.04;                   //Wheel radius, in m
 const double wheelbase = 0.187;               //Wheelbase, in m
-const double encoder_cpr = 990                //Encoder ticks or counts per rotation
-const double speed_to_pwm_ratio = 0.00235     //Ratio to convert speed (in m/s) to PWM value. It was obtained by plotting the wheel speed in relation to the PWM motor command (the value is the slope of the linear function).
-const double min_speed_cmd = 0.0882           //(min_speed_cmd/speed_to_pwm_ratio) is the minimum command value needed for the motor to start moving. This value was obtained by plotting the wheel speed in relation to the PWM motor command (the value is the constant of the linear function).
+const double encoder_cpr = 990;                //Encoder ticks or counts per rotation
+const double speed_to_pwm_ratio = 0.00235;     //Ratio to convert speed (in m/s) to PWM value. It was obtained by plotting the wheel speed in relation to the PWM motor command (the value is the slope of the linear function).
+const double min_speed_cmd = 0.0882;           //(min_speed_cmd/speed_to_pwm_ratio) is the minimum command value needed for the motor to start moving. This value was obtained by plotting the wheel speed in relation to the PWM motor command (the value is the constant of the linear function).
 
 double speed_req = 0;                         //Desired linear speed for the robot, in m/s
 double angular_speed_req = 0;                 //Desired angular speed for the robot, in rad/s
@@ -102,9 +104,12 @@ ros::Publisher speed_pub("speed", &speed_msg);
 #define motor1Pin2 26
 
 // Motor B - right look from back
-#define motor2Pin3 33;
-#define motor2Pin4 32;
-#define enable2Pin 12;
+#define motor2Pin3 33
+#define motor2Pin4 32
+#define enable2Pin 12
+
+L298N leftMotor(enable1Pin,motor1Pin1,motor1Pin2);
+L298N rightMotor(enable2Pin,motor2Pin3,motor2Pin4);
 
 
 
@@ -146,8 +151,8 @@ void connectWiFi(){
 
 void setupMotor(){
 
-  L298N leftMotor(enable1Pin,motor1Pin1,motor1Pin2);
-  L298N rightMotor(enable2Pin,motor2Pin3,motor2Pin4);
+  //L298N leftMotor(enable1Pin,motor1Pin1,motor1Pin2);
+  //L298N rightMotor(enable2Pin,motor2Pin3,motor2Pin4);
 
     //setting motor speeds to zero
   leftMotor.setSpeed(0);
@@ -277,11 +282,11 @@ void loop() {
     }
     else if (PWM_leftMotor > 0){                          //Going forward
       leftMotor.setSpeed(abs(PWM_leftMotor));
-      leftMotor.backward();
+      leftMotor.forward();
     }
     else {                                               //Going backward
       leftMotor.setSpeed(abs(PWM_leftMotor));
-      leftMotor.forward();
+      leftMotor.backward();
     }
     
     speed_cmd_right = constrain(speed_cmd_right, -max_speed, max_speed);    
@@ -303,7 +308,7 @@ void loop() {
     }
     else {                                                //Going backward
       rightMotor.setSpeed(abs(PWM_rightMotor));
-      rightMotor->backward();
+      rightMotor.backward();
     }
 
     if((millis()-lastMilli) >= LOOPTIME){         //write an error if execution time of the loop in longer than the specified looptime
@@ -334,15 +339,16 @@ void publishSpeed(double time) {
                                                 
 //Left motor encoder counter
 void encoderLeftMotor() {
-  if (digitalRead(PIN_ENCOD_A_MOTOR_LEFT) == digitalRead(PIN_ENCOD_B_MOTOR_LEFT)) pos_left++;
-  else pos_left--;
+  //if (digitalRead(PIN_ENCOD_A_MOTOR_LEFT) == digitalRead(PIN_ENCOD_B_MOTOR_LEFT)) pos_left++;
+  //else pos_left--;
 }
 
 //Right motor encoder counter
 void encoderRightMotor() {
-  if (digitalRead(PIN_ENCOD_A_MOTOR_RIGHT) == digitalRead(PIN_ENCOD_B_MOTOR_RIGHT)) pos_right--;
-  else pos_right++;
+  //if (digitalRead(PIN_ENCOD_A_MOTOR_RIGHT) == digitalRead(PIN_ENCOD_B_MOTOR_RIGHT)) pos_right--;
+  //else pos_right++;
 }
 
 template <typename T> int sgn(T val) {
-    return (T(0) < val) - (val < T(0));
+return (T(0) < val) - (val < T(0));
+}
