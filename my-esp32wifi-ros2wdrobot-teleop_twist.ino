@@ -136,6 +136,9 @@ const double PID_right_param[] = { 2, 5, 1 }; //Respectively Kp, Ki and Kd for r
 volatile float pos_left = 0;       //Left motor encoder position
 volatile float pos_right = 0;      //Right motor encoder position
 
+// speed_request=> speed as requested from keyboard
+// speed_act=> speed after feedback from PID
+// cmd input based on feedback speed_act. This the PWM value that relates to speed
 PID PID_leftMotor(&speed_act_left, &speed_cmd_left, &speed_req_left, PID_left_param[0], PID_left_param[1], PID_left_param[2], DIRECT);          //Setting up the PID for left motor
 PID PID_rightMotor(&speed_act_right, &speed_cmd_right, &speed_req_right, PID_right_param[0], PID_right_param[1], PID_right_param[2], DIRECT);   //Setting up the PID for right motor
 
