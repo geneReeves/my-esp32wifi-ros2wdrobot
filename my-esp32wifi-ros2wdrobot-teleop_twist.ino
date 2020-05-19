@@ -45,9 +45,9 @@ class WiFiHardware {
 
                                                                             // ROBOT SPECIFIC PARAMETERS 
 
-const double radius = 0.04;                   //Wheel radius, in m
-const double wheelbase = 0.187;               //Wheelbase, in m
-const double encoder_cpr = 990;                //Encoder ticks or counts per rotation
+const double radius = 0.03;                   //Wheel radius, in m
+const double wheelbase = 0.135;               //Wheelbase, in m
+const double encoder_cpr = 20;                //Encoder ticks or counts per rotation
 const double speed_to_pwm_ratio = 0.00235;     //Ratio to convert speed (in m/s) to PWM value. It was obtained by plotting the wheel speed in relation to the PWM motor command (the value is the slope of the linear function).
 const double min_speed_cmd = 0.0882;           //(min_speed_cmd/speed_to_pwm_ratio) is the minimum command value needed for the motor to start moving. This value was obtained by plotting the wheel speed in relation to the PWM motor command (the value is the constant of the linear function).
 
@@ -98,17 +98,17 @@ ros::Publisher speed_pub("speed", &speed_msg);
 
 
 //pin definition
-// Motor A - left look from back
-#define CHA 0
-#define enable1Pin 13
+// Motor B - left look from back
+#define CHB 0
+#define enable2Pin 25  // brown 
+#define motor2Pin3 33  // orange
+#define motor2Pin4 32 // red
+
+// Motor A - right look from back
+#define CHA 1
 #define motor1Pin1 27
 #define motor1Pin2 26
-
-// Motor B - right look from back
-#define CHB 1
-#define motor2Pin3 33
-#define motor2Pin4 32
-#define enable2Pin 12
+#define enable1Pin 13
 
 
 const int CCW = 2; // do not change
@@ -130,8 +130,8 @@ Robojax_L298N_DC_motor robotMotors(motor1Pin1, motor1Pin2, enable1Pin, CHA,  mot
 
 //PID constants
 
-const double PID_left_param[] = { 2, 5, 1 }; //Respectively Kp, Ki and Kd for left motor PID
-const double PID_right_param[] = { 2, 5, 1 }; //Respectively Kp, Ki and Kd for right motor PID
+const double PID_left_param[] = { 1, 5, 0 }; //Respectively Kp, Ki and Kd for left motor PID
+const double PID_right_param[] = { 1, 5, 0 }; //Respectively Kp, Ki and Kd for right motor PID
 
 volatile float pos_left = 0;       //Left motor encoder position
 volatile float pos_right = 0;      //Right motor encoder position
@@ -142,9 +142,10 @@ volatile float pos_right = 0;      //Right motor encoder position
 PID PID_leftMotor(&speed_act_left, &speed_cmd_left, &speed_req_left, PID_left_param[0], PID_left_param[1], PID_left_param[2], DIRECT);          //Setting up the PID for left motor
 PID PID_rightMotor(&speed_act_right, &speed_cmd_right, &speed_req_right, PID_right_param[0], PID_right_param[1], PID_right_param[2], DIRECT);   //Setting up the PID for right motor
 
+//Input Only PIN
+int PIN_ENCOD_A_MOTOR_LEFT = 35;  //Left motor encoder pin 34
+int PIN_ENCOD_A_MOTOR_RIGHT = 34; //Right motor encoder pin 35
 
-int PIN_ENCOD_A_MOTOR_LEFT = 34;  //Left motor encoder pin 34
-int PIN_ENCOD_A_MOTOR_RIGHT = 35; //Right motor encoder pin 35
 
 
 
@@ -172,7 +173,7 @@ void setupMotor(){
   Serial.begin(115200);
 
   // testing
-  Serial.print("DC Motor Ready...");
+  Serial.println("DC Motor Ready...");
 }
 
 void setupPID(){
@@ -184,6 +185,7 @@ void setupPID(){
   PID_rightMotor.SetOutputLimits(-max_speed, max_speed);
   PID_leftMotor.SetMode(AUTOMATIC);
   PID_rightMotor.SetMode(AUTOMATIC);
+    Serial.println("PID  Ready...");
   
 }
 
@@ -202,6 +204,8 @@ void setEncoder(){
   digitalWrite(PIN_ENCOD_A_MOTOR_RIGHT, HIGH);                // turn on pullup resistor
   //digitalWrite(PIN_ENCOD_B_MOTOR_RIGHT, HIGH);
   attachInterrupt(1, encoderRightMotor, RISING);
+
+    Serial.println("Encoder Ready...");
   
 }
 
@@ -213,8 +217,48 @@ void handle_cmd (const geometry_msgs::Twist& cmd_vel) {
 
   angular_speed_req = cmd_vel.angular.z;                            //Extract the commanded angular speed from the message
   
-  speed_req_left = speed_req - angular_speed_req*(wheelbase/2);     //Calculate the required speed for the left motor to comply with commanded linear and angular speeds
-  speed_req_right = speed_req + angular_speed_req*(wheelbase/2);    //Calculate the required speed for the right motor to comply with commanded linear and angular speeds
+ // speed_req_left = speed_req - angular_speed_req*(wheelbase/2);     //Calculate the required speed for the left motor to comply with commanded linear and angular speeds
+ // speed_req_right = speed_req + angular_speed_req*(wheelbase/2);    //Calculate the required speed for the right motor to comply with commanded linear and angular speeds
+
+
+    // turning push j or l
+    if(speed_req == 0 && angular_speed_req != 0){  
+        speed_req_left = angular_speed_req * wheelbase / 2.0;
+        speed_req_right = (-1) * speed_req_left;
+    }
+    // forward / backward push i or <
+    else if(angular_speed_req == 0 && speed_req != 0){ 
+        speed_req_left = speed_req_right = speed_req;
+    }
+    // turn slowly push u or o or m or >
+    else if (angular_speed_req != 0 && speed_req != 0){ 
+        //speed_req_left = speed_req - angular_speed_req * wheelbase / 2.0;
+        //speed_req_right = speed_req + angular_speed_req * wheelbase / 2.0;
+        
+      if (speed_req > 0 && angular_speed_req > 0) { // turn left fwd slow push u
+          speed_req_left = speed_req;
+          speed_req_right = 0;
+      }
+      else if (speed_req > 0 && angular_speed_req < 0) { // turn right fwd slow push o
+          speed_req_right = speed_req;
+          speed_req_left = 0;
+      }
+      else if (speed_req < 0 && angular_speed_req < 0) { // turn left bwd slow push m
+          speed_req_left =  speed_req;
+          speed_req_right = 0;
+      }
+      else if (speed_req < 0 && angular_speed_req > 0) { // turn right bwd slow push >
+          speed_req_right = speed_req;
+          speed_req_left = 0; 
+      }         
+
+      
+    }
+
+ /* Serial.print("speed_req_left... ");
+  Serial.print(speed_req_left);
+  Serial.print("speed_req_right... ");
+  Serial.println(speed_req_right);  */
 }
 
 
@@ -233,7 +277,8 @@ void initNodeHandler(){
 
   nh.subscribe(cmd_vel);    //suscribe to ROS topic for velocity commands
   nh.advertise(speed_pub);  //prepare to publish speed in ROS topic
-  
+
+  Serial.println("Node_handler_ready");  
 }
                       
 
@@ -339,6 +384,13 @@ void loop() {
     }
     
     publishSpeed(LOOPTIME);   //Publish odometry on ROS topic
+
+/*
+   Serial.print("PWM_leftMotor ");
+   Serial.print(PWM_leftMotor);
+   Serial.print("PWM_rightMotor ");
+   Serial.println(PWM_rightMotor);    */
+  
   }
  }
  
@@ -352,7 +404,7 @@ void publishSpeed(double time) {
   speed_msg.vector.z = time/1000;         //looptime, should be the same as specified in LOOPTIME (in s)
   speed_pub.publish(&speed_msg);
   nh.spinOnce();
-  nh.loginfo("Publishing odometry");
+  //nh.loginfo("Publishing odometry");
 }
                                                 
 //Left motor encoder counter
