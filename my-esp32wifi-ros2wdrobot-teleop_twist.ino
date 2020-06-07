@@ -296,7 +296,7 @@ void setup() {
                                                                                    //LOOP MAIN
 void loop() {
 
-  nh.spinOnce();
+
 
   if((millis()-lastMilli) >= LOOPTIME)   
   {                                                                           // enter timed loop
@@ -392,7 +392,10 @@ void loop() {
    Serial.println(PWM_rightMotor);    */
   
   }
- }
+  
+  nh.spinOnce();
+  delay(200);
+}
  
                                                                     // FUNCTIONS 
                                                 
